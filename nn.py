@@ -93,16 +93,23 @@ class NeuralNetwork:
         self.accum_rate = 0
 
     def feedforward(self, inputs):
+        '''
         output_h1 = self.h1.feedforward(inputs)
         output_h2 = self.h2.feedforward(inputs)
         output_h3 = self.h3.feedforward(inputs)
         output_h4 = self.h4.feedforward(inputs)
         output_h5 = self.h5.feedforward(inputs)
+        '''
+        output_h1 = self.hs[0].feedforward(inputs)
+        output_h2 = self.hs[1].feedforward(inputs)
+        output_h3 = self.hs[2].feedforward(inputs)
+        output_h4 = self.hs[3].feedforward(inputs)
+        output_h5 = self.hs[4].feedforward(inputs)
 
         output_h = [output_h1, output_h2, output_h3, output_h4, output_h5]
 
-        output_o1 = self.o1.feedforward(output_h)
-        output_o2 = self.o2.feedforward(output_h)
+        output_o1 = self.os[0].feedforward(output_h)
+        output_o2 = self.os[1].feedforward(output_h)
 
         return [output_o1, output_o2]
 
@@ -211,11 +218,11 @@ def roulette_selection(nets) -> NeuralNetwork:
             return net
 
 
-def get_elites(nets) ->list:
+def get_elites(nets,rate) ->list:
     """
     get top 1/4 elites networks from this generation
     """
-    elites = [nets[i] for i in range(int(len(nets)/4))]
+    elites = [nets[i] for i in range(int(len(nets)*rate))]
     return elites
 
 
@@ -244,20 +251,19 @@ def crossover(nets) -> NeuralNetwork:
     return child
 
 
-def mutation(nets) -> list:
+def mutation(nets,pm,ratio) -> list:
     """
     mutate next generation networks by 'Pm'
     'Pm' is the probability of mutation
     """
-    pm = 0.1
     for i in range(len(nets)):
         # every hidden layer neuron
         for j in range(len(nets[i].hs)):
             if random.random() < pm:
                 # mutate weights and bias
                 for k in range(len(nets[i].hs[j].weights)):
-                    nets[i].hs[j].weights[k] += random.uniform(-0.1, 0.1)*nets[i].hs[j].weights[k]
-                nets[i].hs[j].bias += random.uniform(-0.1, 0.1)*nets[i].hs[j].bias
+                    nets[i].hs[j].weights[k] += random.uniform(-ratio, ratio)*nets[i].hs[j].weights[k]
+                nets[i].hs[j].bias += random.uniform(-ratio, ratio)*nets[i].hs[j].bias
     return nets
 
 
@@ -286,7 +292,7 @@ def main():
     nets = sort_score(nets)
 
     # top 1/4 elite networks
-    elites=get_elites(nets)
+    elites=get_elites(nets,0.25)
 
     # next generation's networks list
     next_gen_nets=[]
@@ -300,7 +306,7 @@ def main():
         next_gen_nets.append(child)
 
     # mutate next generation's every network including elites
-    next_gen_nets=mutation(next_gen_nets)
+    next_gen_nets=mutation(next_gen_nets,0.1)
 
     print([net.hs[1].bias for net in next_gen_nets])
 
