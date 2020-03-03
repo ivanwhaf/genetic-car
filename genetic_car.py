@@ -6,30 +6,35 @@ from pygame.locals import *
 from nn import *
 
 pg.init()
-size = width, height = 1060, 700  # 屏幕大小
+size = width, height = 1060, 700  # screen size
 screen = pg.display.set_mode(size)
 pg.display.set_caption("Genetic algorithm car")
 
-background = pg.image.load('bg4.png')
+background = pg.image.load('bg2.png')  # lodad background imgage
 
-num = 50  # 每轮样本数量
-generation = 100  # 迭代轮数
-pm = 0.5  # 变异率
-ratio = 0.25  # 变异比率
-FPS = 60  # fps设定值
+num = 100  # samples number per loop
+generation = 100  # iteration round number
+
+cross_ratio = 0.3  # ratio of top performers when crossovering
+elite_ratio = 0.1  # elite ratio of all samples
+
+pm = 0.4  # probability of mutation
+mutation_range = 0.2  # range of mutation -~+
+
+FPS = 60  # fps setting
 count = 0
 fps = 0
 start = time.time()
 clock = pg.time.Clock()
 
-my_font = pg.font.Font(None, 25)  # 字体设置
+my_font = pg.font.Font(None, 25)  # font setting
 
-x, y = 380, 406  # 小车初始位置
-max_speed = 15  # 小车最大速度
+x, y = 385, 400  # car's initial position
+max_speed = 10  # car's max limit speed
 
 
 def change_angle(gs):
-    # 调整角度
+    # modify angle
     global angle
     angle = 0
 
@@ -38,15 +43,13 @@ def change_angle(gs):
 
 
 def draw_text(text, pos, color):
-    # 绘制字符
     img = my_font.render(
         text, True, color)
     screen.blit(img, pos)
 
 
 def boundary_detect():
-    # 边界检测
-    # 到达边界则停下
+    # arrive at the boundary then stop
     global speed, x, y
     if x <= 0:
         x = 0
@@ -64,7 +67,7 @@ def boundary_detect():
 
 class Car:
     """
-    car class,including position
+    car class,including position,speed,and some status.
     """
 
     def __init__(self):
@@ -77,7 +80,7 @@ class Car:
         # live status
         self.isAlive = True
 
-        # three distance indicator lines' postions
+        # three distance indicator lines' end point positions
         self.x1 = 0
         self.y1 = 0
         self.y2 = 0
@@ -93,10 +96,11 @@ class Car:
         # total running distance
         self.distance = 0
 
+        # judge reward line flag
         self.flag = False
 
     def set_position(self):
-        # 根据角度和速度更新坐标、行驶距离
+        # update position and distance according to angle and speed
         if not self.isAlive:
             return
         angle = math.pi*(-self.angle)/180
@@ -112,16 +116,25 @@ class Car:
         pixel = screen.get_at((int(self.x), int(self.y)))
         if pixel[0] <= 1 and pixel[1] <= 1 and pixel[2] <= 1:
             self.isAlive = False
+        if self.distance <= 0:
+            self.isAlive = False
 
-    def detect_markline(self):
+    def detect_markline(self, i):
+        # detect yellow reward line then reward
         if screen.get_at((int(self.x), int(self.y))) == ((255, 243, 0, 255) or (255, 242, 0, 255)):
             if not self.flag:
-                self.distance += 300
-                print('wow')
+                self.distance += 500  # reward
+                print('reward '+str(i))
                 self.flag = True
         else:
             if self.flag == True:
                 self.flag = False
+
+        # detect red start line then punish
+        pixel = screen.get_at((int(self.x), int(self.y)))
+        if abs(pixel[0]-237) <= 1 and abs(pixel[1]-29) <= 1 and abs(pixel[2]-36) <= 1:
+            self.distance -= 1000  # punish
+            print('punish '+str(i))
 
     def draw_indicator_line(self):
         pg.draw.line(screen, (0, 255, 0), (self.x, self.y),
@@ -132,9 +145,7 @@ class Car:
                      (self.x3, self.y3), 1)
 
     def calculate_distance(self):
-        """
-        calculate car's three angles' distances form the track boundary
-        """
+        # calculate car's three angles' distances form the track boundary
         if not self.isAlive:
             return
         x = self.x
@@ -184,12 +195,13 @@ class Car:
                 break
 
     def draw(self, color='blue'):
+        # draw car itself
         if color == 'blue':
             pg.draw.circle(screen, (0, 0, 255), (int(
-                self.x), int(self.y)), 7, 0)  # 绘制圆代替小车
+                self.x), int(self.y)), 7, 0)  # replace car as circle
         elif color == 'yellow':
             pg.draw.circle(screen, (255, 255, 0), (int(
-                self.x), int(self.y)), 7, 0)  # 绘制圆代替小车
+                self.x), int(self.y)), 7, 0)  # replace car as circle
 
 
 def sort_car_nets(cars, nets):
@@ -203,7 +215,7 @@ def sort_car_nets(cars, nets):
                 temp = cars[i]
                 cars[i] = cars[j]
                 cars[j] = temp
-
+                # swap
                 temp = nets[i]
                 nets[i] = nets[j]
                 nets[j] = temp
@@ -212,35 +224,37 @@ def sort_car_nets(cars, nets):
 
 def main_loop():
     global start, fps, count
-    run = True  # 运行标志
-    pause = False  # 暂停标志
-
+    run = True  # running status
+    pause = False  # pause status
+    begin = time.time()
+    last_round_time = begin
     gen = 1
-    # 生成车
+
+    # create cars
     cars = []
     for i in range(num):
         car = Car()
         cars.append(car)
 
-    # 生成神经网络
+    # create networks
     nets = []
     for i in range(num):
         nets.append(NeuralNetwork())
 
-    # 主循环
+    # main loop
     while run:
-        clock.tick(FPS)  # 设置fps
+        clock.tick(FPS)  # set fps
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 run = False
             if event.type == pg.KEYDOWN:
-                if event.key == pg.K_p:  # P键暂停
+                if event.key == pg.K_p:  # Key 'P' to pause
                     pause = not pause
 
         if pause:
             continue
 
-        # 计算fps
+        # calculate fps
         count += 1
         now = time.time()
         if now-start > 0.1:
@@ -248,61 +262,71 @@ def main_loop():
             start = now
             count = 0
 
-        screen.blit(background, (0, 0))  # 绘制背景地图
+        screen.blit(background, (0, 0))  # draw background
 
         for i in range(len(cars)):
             if cars[i].isAlive:
-                cars[i].calculate_distance()  # 计算与车道边缘距离
+                # calculate distance from car to track boundary
+                cars[i].calculate_distance()
                 angle, speed = nets[i].feedforward(
                     [cars[i].dis1, cars[i].dis2, cars[i].dis3])  # get network's output
-                # update car's properties
-                speed = abs(speed)*8
 
+                # update car's properties
+                speed = abs(speed)*10
                 cars[i].angle = angle*180
                 if speed > max_speed:
                     speed = max_speed
-
                 cars[i].speed = speed
-                cars[i].set_position()  # 更新位置
-                cars[i].detect_markline()  # 检测加分线
-                cars[i].detect_track_boundary()  # 碰撞检测
-                nets[i].score = cars[i].distance
 
+                cars[i].set_position()  # update position
+                cars[i].detect_markline(i)  # detect reward line and start line
+                cars[i].detect_track_boundary()  # detect collide
+                nets[i].score = cars[i].distance  # update network's score
+
+        print(cars[0].angle)
+        if time.time()-last_round_time > 30:
+            for i in range(len(cars)):
+                if cars[i].isAlive:
+                    cars[i].distance = 0
+                    cars[i].isAlive = False
         cars, nets = sort_car_nets(cars, nets)
 
-        # 绘图部分
-        alive = 0  # 存活数量
+        # drawing part
+        alive = 0  # survive numbers
         for i in range(len(cars)):
             if i == 0:
-                cars[i].draw('yellow')  # 第一名用黄色
+                cars[i].draw('yellow')  # No.1 marked yellow
             else:
-                cars[i].draw()  # 绘制小车自身
+                cars[i].draw()  # draw car itself
             if cars[i].isAlive:
                 alive += 1
-                cars[i].draw_indicator_line()  # 绘制距离指示线
+                cars[i].draw_indicator_line()  # draw three indicator line
 
         draw_text("Gen: "+str(gen), (900, 10), (0, 0, 255))
         draw_text("All: "+str(len(cars)), (900, 30), (0, 0, 255))
         draw_text("Alive: "+str(alive), (900, 50), (0, 0, 255))
         draw_text("top1 distance: " +
                   str(int(cars[0].distance)), (900, 70), (0, 0, 255))
+        draw_text("total time: " +
+                  str(int(time.time()-begin)), (900, 90), (0, 0, 255))
+        draw_text("this round time: " +
+                  str(int(time.time()-last_round_time)), (900, 110), (0, 0, 255))
 
-        draw_text("fps:"+str(round(fps, 5)), (10, 10), (0, 0, 255))  # 绘制fps
-        mouse_pos_x, mouse_pos_y = pg.mouse.get_pos()  # 获取鼠标坐标
+        draw_text("fps:"+str(round(fps, 5)), (10, 10), (0, 0, 255))
+        mouse_pos_x, mouse_pos_y = pg.mouse.get_pos()  # get mouse's position
         draw_text('pos_x:'+str(mouse_pos_x)+'  pos_y:' +
-                  str(mouse_pos_y), (10, 30), (0, 0, 255))  # 绘制鼠标坐标
+                  str(mouse_pos_y), (10, 30), (0, 0, 255))
         draw_text(str(screen.get_at((mouse_pos_x, mouse_pos_y))),
-                  (10, 70), (0, 0, 255))  # 绘制鼠标坐标
+                  (10, 70), (0, 0, 255))
+        draw_text("press 'p' to pause!", (10, 50), (0, 0, 255))
 
-        draw_text("press 'p' to pause!", (10, 50), (0, 0, 255))  # 绘制注意事项
-
-        # pg.display.flip() #  重新绘制窗口
+        # pg.display.flip() #  redraw window
         pg.display.update()
 
-        # this gen over
+        # when this gen was over
         if alive == 0:
             # top 1/4 elite networks
-            elites = get_elites(nets, 0.1)
+            elites = get_elites(nets, elite_ratio)
 
             # next generation's networks list
             next_gen_nets = []
@@ -312,12 +336,13 @@ def main_loop():
 
             # create hybrid children and add them to next geration until enough
             for i in range(num-len(elites)):
-                child = crossover(nets)
+                child = crossover(nets, cross_ratio)
                 next_gen_nets.append(child)
 
-            # mutate next generation's every network including elites
+            # mutate next generation's every network including elites and children
             next_gen_nets = mutation(next_gen_nets, pm, ratio)
 
+            # recreate new cars
             cars = []
             for i in range(num):
                 car = Car()
@@ -325,7 +350,10 @@ def main_loop():
 
             nets = next_gen_nets
             gen += 1
-
+            last_round_time = time.time()
+            # quit when gen was enough
+            if gen > generation:
+                break
     pg.quit()
 
 
