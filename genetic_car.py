@@ -10,13 +10,14 @@ size = width, height = 1060, 700  # screen size
 screen = pg.display.set_mode(size)
 pg.display.set_caption("Genetic algorithm car")
 
-background = pg.image.load('bg2.png')  # lodad background imgage
+background = pg.image.load('resources/bg2.png')  # lodad background imgage
 
 num = 100  # samples number per loop
 generation = 100  # iteration round number
 
 cross_ratio = 0.3  # ratio of top performers when crossovering
 elite_ratio = 0.1  # elite ratio of all samples
+mutate_ratio = 0.2  # mutation ratio
 
 pm = 0.4  # probability of mutation
 mutation_range = 0.2  # range of mutation -~+
@@ -340,7 +341,7 @@ def main_loop():
                 next_gen_nets.append(child)
 
             # mutate next generation's every network including elites and children
-            next_gen_nets = mutation(next_gen_nets, pm, ratio)
+            next_gen_nets = mutation(next_gen_nets, pm, mutate_ratio)
 
             # recreate new cars
             cars = []
