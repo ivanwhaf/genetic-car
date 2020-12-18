@@ -163,7 +163,7 @@ def roulette_selection(nets, ratio) -> NeuralNetwork:
 
 def get_elites(nets, ratio) -> list:
     """
-    get top 1/4 elites networks from this generation
+    get top ratio elites networks from this generation
     """
     elites = [nets[i] for i in range(int(len(nets) * ratio))]
     return elites
@@ -194,6 +194,31 @@ def crossover(nets, ratio) -> NeuralNetwork:
 
     return child
 
+def crossover2(nets) -> NeuralNetwork:
+    """
+    select two networks through 'roullette wheel selection' algorithm,
+    then cross their genes (weights) randomly to get a new child (network)
+    """
+    father = random.choice(nets)
+    mother = random.choice(nets)
+    child = NeuralNetwork()
+
+    # crossover hidden layer
+    for i in range(len(child.hs)):
+        if random.random() < 0.5:
+            child.hs[i] = father.hs[i]
+        else:
+            child.hs[i] = mother.hs[i]
+
+    # crossover output layer
+    for i in range(len(child.os)):
+        if random.random() < 0.5:
+            child.os[i] = father.os[i]
+        else:
+            child.os[i] = mother.os[i]
+
+    return child
+
 
 def mutate(nets, pm, range_) -> list:
     """
@@ -206,10 +231,10 @@ def mutate(nets, pm, range_) -> list:
             if random.random() < pm:
                 # mutate weights and bias
                 for k in range(len(nets[i].hs[j].weights)):
-                    nets[i].hs[j].weights[k] += random.uniform(-range_,
-                                                               range_) * nets[i].hs[j].weights[k]
-                nets[i].hs[j].bias += random.uniform(-range_,
-                                                     range_) * nets[i].hs[j].bias
+                    nets[i].hs[j].weights[k] += random.uniform(
+                        *range_) * nets[i].hs[j].weights[k]
+                nets[i].hs[j].bias += random.uniform(*range_) * \
+                    nets[i].hs[j].bias
     return nets
 
 

@@ -15,21 +15,20 @@ font = pg.font.Font(None, 25)  # font setting
 
 num = 100  # samples number per loop
 generation = 50  # iteration round number
-gen_max_time=60
+gen_max_time = 35
 
 cross_ratio = 0.3  # ratio of top performers when crossovering
 elite_ratio = 0.05  # ratio of elite in all samples
-mutate_ratio = 0.2  # ratio of mutation
 
-pm = 0.4  # probability of mutation
-mutate_range = 0.2  # range of mutation -~+
+pm = 0.2  # probability of mutation
+mutate_range = (-0.2, 0.2)  # range of mutation value -~+
 
 FPS = 60  # fps setting
 
 x_init, y_init = 385, 400  # car's initial position
-max_speed = 3  # car's max limit speed
-min_speed = 1.5  # car's min limit speed
-min_angle_speed_change_frame_interval = 3
+max_speed = 4  # car's max limit speed
+min_speed = 2  # car's min limit speed
+min_angle_speed_change_frame_interval = 1
 
 
 # def change_angle(gs):
@@ -357,7 +356,7 @@ def main():
                 next_gen_nets.append(child)
 
             # mutate next generation's each network including elites and children
-            next_gen_nets = mutate(next_gen_nets, pm, mutate_ratio)
+            next_gen_nets = mutate(next_gen_nets, pm, mutate_range)
 
             # recreate new cars
             cars = create_car_angnts()
