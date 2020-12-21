@@ -12,6 +12,14 @@ def tanh(x):
     return (np.exp(x) - np.exp(-x)) / (np.exp(x) + np.exp(-x))
 
 
+def relu(x):
+    # relu function
+    if x <= 0:
+        return 0
+    else:
+        return x
+
+
 def deriv_sigmoid(x):
     # derivative of sigmoid function: f'(x) = f(x) * (1 - f(x))
     fx = sigmoid(x)
@@ -19,7 +27,7 @@ def deriv_sigmoid(x):
 
 
 def mse_loss(y_true, y_predict):
-    # loss function
+    # mse loss function
     return ((y_true - y_predict) ** 2).mean()
 
 
@@ -44,11 +52,6 @@ class Neuron:
         self.bias = bias
 
     def feedforward(self, inputs, activation=None):
-        """
-        output=0
-        for i in range(len(inputs)):
-            output+=inputs[i]*weights[i]
-        """
         output = np.dot(self.weights, inputs) + self.bias
         if activation == 'sigmoid':
             return sigmoid(output)
@@ -60,7 +63,7 @@ class Neuron:
 
 class NeuralNetwork:
     """
-    this network consist of three layers including 1 input layer, 1 hidden layer, and 1 output layer
+    this network consists of three layers including 1 input layer, 1 hidden layer, and 1 output layer
     input layer has 3 neurons, hidden layer has 5 neurons, and output layer has 2 neurons
     ┌─────────────┬──────────────┬──────────────┐
      input layer  hidden layer  output layer 
@@ -112,7 +115,7 @@ class NeuralNetwork:
         return [output_o1, output_o2]
 
 
-def sort_score(nets) -> list:
+def sort_network_by_score(nets) -> list:
     """
     sort networks list by their score (fitness), big-->small
     """
@@ -126,7 +129,7 @@ def sort_score(nets) -> list:
     return nets
 
 
-def update_score(nets) -> list:
+def update_network_score(nets) -> list:
     """
     update every network's score (fitness) per loop
     fitness is determined by every networks's behaves in current round
@@ -194,9 +197,47 @@ def crossover(nets, ratio) -> NeuralNetwork:
 
     return child
 
+
+def mutate(nets, pm, range_) -> list:
+    """
+    mutate next generation networks by 'Pm'
+    'Pm' is the probability of mutation
+    """
+    if not isinstance(nets, list):
+        for j in range(len(nets.hs)):
+            if random.random() < pm:
+                # mutate weights and bias
+                for k in range(len(nets.hs[j].weights)):
+                    nets.hs[j].weights[k] += random.uniform(
+                        *range_) * nets.hs[j].weights[k]
+                nets.hs[j].bias += random.uniform(*range_) * \
+                    nets.hs[j].bias
+        return nets
+
+    for i in range(len(nets)):
+        # every hidden layer's neuron
+        for j in range(len(nets[i].hs)):
+            if random.random() < pm:
+                # mutate weights and bias
+                for k in range(len(nets[i].hs[j].weights)):
+                    nets[i].hs[j].weights[k] += random.uniform(
+                        *range_) * nets[i].hs[j].weights[k]
+                nets[i].hs[j].bias += random.uniform(*range_) * \
+                    nets[i].hs[j].bias
+    return nets
+
+
+def get_elites2(nets, cars) -> list:
+    """
+    get selected elites networks from this generation
+    """
+    elites = [nets[i] for i in range(len(nets)) if cars[i].selected == True]
+    return elites
+
+
 def crossover2(nets) -> NeuralNetwork:
     """
-    select two networks through 'roullette wheel selection' algorithm,
+    select two networks from nets randomly
     then cross their genes (weights) randomly to get a new child (network)
     """
     father = random.choice(nets)
@@ -220,24 +261,6 @@ def crossover2(nets) -> NeuralNetwork:
     return child
 
 
-def mutate(nets, pm, range_) -> list:
-    """
-    mutate next generation networks by 'Pm'
-    'Pm' is the probability of mutation
-    """
-    for i in range(len(nets)):
-        # every hidden layer's neuron
-        for j in range(len(nets[i].hs)):
-            if random.random() < pm:
-                # mutate weights and bias
-                for k in range(len(nets[i].hs[j].weights)):
-                    nets[i].hs[j].weights[k] += random.uniform(
-                        *range_) * nets[i].hs[j].weights[k]
-                nets[i].hs[j].bias += random.uniform(*range_) * \
-                    nets[i].hs[j].bias
-    return nets
-
-
 def main():
     weights = [1, 2]  # w1=1, w2=2
     bias = 5
@@ -257,10 +280,10 @@ def main():
         nets.append(NeuralNetwork())
 
     # update fitness according to behaves
-    nets = update_score(nets)
+    nets = update_network_score(nets)
 
     # sort networks by their fitness
-    nets = sort_score(nets)
+    nets = sort_network_by_score(nets)
 
     # top 1/4 elite networks
     elites = get_elites(nets, 0.25)

@@ -10,23 +10,24 @@ pg.init()  # initilize the game
 size = width, height = 1060, 700  # screen size
 screen = pg.display.set_mode(size)
 pg.display.set_caption("Genetic algorithm car")  # set title
-# lodad background imgage
-background = pg.image.load('resources/bg.png')
+background = pg.image.load('resources/bg.png')  # background
 font = pg.font.Font(None, 25)  # font setting
 
-num = 100  # samples number per loop
+num = 150  # samples number per loop
 generation = 50  # iteration round number
 gen_max_time = 30  # every generation's max time
 
-pm = 0.9  # probability of mutation
-mutate_range = (-5, 5)  # range of mutation value -~+
+pm = 0.95  # probability of mutation
+mutate_elites_range = (-0.2, 0.2)  # range of mutation value -~+
+mutate_range = (-1, 1)  # range of mutation value -~+
 
 FPS = 60  # fps setting
 
 x_init, y_init = 385, 400  # car's initial position
-max_speed = 8  # car's max limit speed
-min_speed = 4  # car's min limit speed
-min_angle_speed_change_frame_interval = 1
+max_speed = 6  # car's max limit speed
+min_speed = 3  # car's min limit speed
+
+min_angle_speed_change_frame_interval = 2
 
 
 def draw_text(text, pos, color):
@@ -73,9 +74,9 @@ class Car:
         if not self.isAlive:
             return
 
-        angle = math.pi*(-self.angle)/180
-        self.x = self.x + self.speed*math.cos(angle)
-        self.y = self.y + self.speed*math.sin(angle)
+        angle = math.pi*(self.angle)/180
+        self.x += self.speed*math.cos(angle)
+        self.y -= self.speed*math.sin(angle)
         self.distance += math.sqrt((self.speed*math.cos(angle))
                                    ** 2+(self.speed*math.sin(angle))**2)
 
@@ -101,46 +102,46 @@ class Car:
         # calculate car's three angles' distances form the track boundary
         if not self.isAlive:
             return
-        x, y = self.x, self.y
-        angle = self.angle
 
-        ang1 = angle+55
-        ang2 = angle
-        ang3 = angle-55
+        ang1 = self.angle+55
+        ang2 = self.angle
+        ang3 = self.angle-55
 
+        # rand
         angle1 = math.pi*(ang1)/180
         angle2 = math.pi*(ang2)/180
         angle3 = math.pi*(ang3)/180
 
-        d = 12  # weight to reduce the distance to a resonable region
+        d = 40  # weight to reduce the distance to a resonable region
         for i in range(1000):
-            x1 = x+i*math.cos(angle1)
-            y1 = y-i*math.sin(angle1)
+            x1 = self.x+i*math.cos(angle1)
+            y1 = self.y-i*math.sin(angle1)
             # detect track boundary (black color) (0, 0, 0, 255) or (0, 1, 0, 255)
+
             pixel = screen.get_at((int(x1), int(y1)))
             if pixel[0] <= 1 and pixel[1] <= 1 and pixel[2] <= 1:
                 self.x1, self.y1 = x1, y1
-                self.dis1 = math.sqrt((x-x1)**2+(y-y1)**2)/d
+                self.dis1 = math.sqrt((self.x-x1)**2+(self.y-y1)**2)/d
                 break
 
         for i in range(1000):
-            x2 = x+i*math.cos(angle2)
-            y2 = y-i*math.sin(angle2)
+            x2 = self.x+i*math.cos(angle2)
+            y2 = self.y-i*math.sin(angle2)
             # detect track boundary (black color) (0, 0, 0, 255) or (0, 1, 0, 255)
             pixel = screen.get_at((int(x2), int(y2)))
             if pixel[0] <= 1 and pixel[1] <= 1 and pixel[2] <= 1:
                 self.x2, self.y2 = x2, y2
-                self.dis2 = math.sqrt((x-x2)**2+(y-y2)**2)/d
+                self.dis2 = math.sqrt((self.x-x2)**2+(self.y-y2)**2)/d
                 break
 
         for i in range(1000):
-            x3 = x+i*math.cos(angle3)
-            y3 = y-i*math.sin(angle3)
+            x3 = self.x+i*math.cos(angle3)
+            y3 = self.y-i*math.sin(angle3)
             # detect track boundary (black color) (0, 0, 0, 255) or (0, 1, 0, 255)
             pixel = screen.get_at((int(x3), int(y3)))
             if pixel[0] <= 1 and pixel[1] <= 1 and pixel[2] <= 1:
                 self.x3, self.y3 = x3, y3
-                self.dis3 = math.sqrt((x-x3)**2+(y-y3)**2)/d
+                self.dis3 = math.sqrt((self.x-x3)**2+(self.y-y3)**2)/d
                 break
 
     def draw(self, color='blue'):
@@ -156,25 +157,7 @@ class Car:
                 self.x), int(self.y)), 8, 0)  # replace car as circle
 
 
-def sort_car_nets(cars, nets):
-    """
-    sort cars, nets by their running distance, big-->small
-    """
-    for i in range(len(cars)-1):
-        for j in range(i+1, len(cars)):
-            if cars[i].distance < cars[j].distance:
-                # swap cars
-                temp = cars[i]
-                cars[i] = cars[j]
-                cars[j] = temp
-                # swap nets
-                temp = nets[i]
-                nets[i] = nets[j]
-                nets[j] = temp
-    return cars, nets
-
-
-def create_car_angnts():
+def create_car_agents():
     cars = []
     for i in range(num):
         car = Car()
@@ -182,17 +165,11 @@ def create_car_angnts():
     return cars
 
 
-def get_elites2(nets, cars) -> list:
-    """
-    get top ratio elites networks from this generation
-    """
-    elites = [nets[i] for i in range(len(nets)) if cars[i].selected == True]
-    return elites
-
-
 def main():
     fps = 0
     count = 0
+    alive = 0
+
     start = time.time()
     begin = time.time()
     last_round_time = begin
@@ -203,11 +180,10 @@ def main():
     pause = False  # pause status
 
     mannual_select = False
-    alive = 0
     flag_next_gen = False
 
     # create cars
-    cars = create_car_angnts()
+    cars = create_car_agents()
 
     # create networks
     nets = []
@@ -228,25 +204,26 @@ def main():
                     if alive == 0 and mannual_select == True:
                         mannual_select = False
                         flag_next_gen = True
-                        print('next generation')
+                        print('Next generation!')
                         # top elites' networks
                         elites = get_elites2(nets, cars)
 
                         # next generation's networks list
                         next_gen_nets = []
-                        next_gen_nets.extend(elites)
 
                         # add this generation's elites directly to next generation
-                        while len(next_gen_nets) < int(1*len(cars)/3):
+                        next_gen_nets.extend(elites)
+
+                        # add this generation's elites' children to next generation
+                        while len(next_gen_nets) < int(1*len(cars)/4):
                             temp_elites = copy.deepcopy(elites)
-                            temp_elites = mutate(temp_elites, pm, mutate_range)
+                            temp_elites = mutate(
+                                temp_elites, pm, mutate_elites_range)
                             next_gen_nets.extend(temp_elites)
-                            # child = crossover2(temp_elites)
-                            # next_gen_nets.append(child)
 
                         # create hybrid children and add them to next geration until enough
+                        temp_elites = copy.deepcopy(elites)
                         for i in range(len(cars)-len(next_gen_nets)):
-                            temp_elites = copy.deepcopy(elites)
                             child = crossover2(temp_elites)
                             child = mutate(child, pm, mutate_range)
                             next_gen_nets.append(child)
@@ -255,7 +232,7 @@ def main():
                         # next_gen_nets = mutate(next_gen_nets, pm, mutate_range)
 
                         # recreate new cars
-                        cars = create_car_angnts()
+                        cars = create_car_agents()
 
                         nets = next_gen_nets
                         last_round_time = time.time()
@@ -290,20 +267,29 @@ def main():
         for i in range(len(cars)):
             if cars[i].isAlive:
                 # calculate distance from car to track boundary
-                cars[i].calculate_three_distance()
+                try:
+                    cars[i].calculate_three_distance()
+                except:
+                    continue
+
                 angle, speed = nets[i].feedforward(
                     [cars[i].dis1, cars[i].dis2, cars[i].dis3])  # get network's output
 
-                # update car's properties
+                # normalize speed and angle
                 if speed < min_speed:
                     speed = min_speed
                 if speed > max_speed:
                     speed = max_speed
 
+                # if angle < -180:
+                #     angle = -180
+                # if angle > 180:
+                #     angle = 180
+
                 # update speed and angle only every time interval
                 if cars[i].counter >= min_angle_speed_change_frame_interval:
                     cars[i].counter = 0
-                    cars[i].angle += angle*180/30
+                    cars[i].angle += angle*12
                     cars[i].speed = speed
                 else:
                     cars[i].counter += 1
