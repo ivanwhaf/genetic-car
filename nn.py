@@ -1,5 +1,5 @@
-import random
 import numpy as np
+import random
 
 
 def sigmoid(x):
@@ -33,7 +33,7 @@ def mse_loss(y_true, y_predict):
 
 def get_random_weights(size, range_=(-1, 1)) -> list:
     ret = []
-    for i in range(size):
+    for _ in range(size):
         ret.append(random.uniform(*range_))
     return ret
 
@@ -57,7 +57,7 @@ class Neuron:
             return sigmoid(output)
         elif activation == 'tanh':
             return tanh(output)
-        elif activation == None:
+        elif activation is None:
             return output
 
 
@@ -73,11 +73,11 @@ class NeuralNetwork:
     """
 
     def __init__(self):
-        # # hidden layer neurons's initial weights
+        # # hidden layer neurons' initial weights
         # hidden_weights = [0, 1, 0]
-        # # output layer neurons's initial weights
+        # # output layer neurons' initial weights
         # output_weights = [0, 1, 0, 1, 0]
-        # # all neurons's initial bias: 0
+        # # all neurons' initial bias: 0
         # bias = 1
 
         # hidden layer neurons
@@ -96,7 +96,7 @@ class NeuralNetwork:
         # network's fitness score
         self.score = 0
 
-        # network's accum_rate calculated by all networks' score
+        # network's accumulative rate calculated by all networks' score
         self.accum_rate = 0
 
     def feedforward(self, inputs):
@@ -132,7 +132,7 @@ def sort_network_by_score(nets) -> list:
 def update_network_score(nets) -> list:
     """
     update every network's score (fitness) per loop
-    fitness is determined by every networks's behaves in current round
+    fitness is determined by every networks' behaves in current round
     """
     for i in range(len(nets)):
         nets[i].score = i
@@ -141,7 +141,7 @@ def update_network_score(nets) -> list:
 
 def roulette_selection(nets, ratio) -> NeuralNetwork:
     """
-    select one network from networks' mating pool by using 'roullette wheel selection' algorithm
+    select one network from networks' mating pool by using 'Roulette wheel selection' algorithm
     'roulette' algorithm tend to select one network that has higher score
     """
     nets = [nets[i] for i in range(int(len(nets) * ratio))]
@@ -150,7 +150,7 @@ def roulette_selection(nets, ratio) -> NeuralNetwork:
     for net in nets:
         total_score += net.score
 
-    # calculate every network's accum_rate
+    # calculate every network's accumulative rate
     accum_rate = 0
     for i in range(len(nets)):
         rate = nets[i].score / total_score  # one's probability
@@ -174,7 +174,7 @@ def get_elites(nets, ratio) -> list:
 
 def crossover(nets, ratio) -> NeuralNetwork:
     """
-    select two networks through 'roullette wheel selection' algorithm,
+    select two networks through 'Roulette wheel selection' algorithm,
     then cross their genes (weights) randomly to get a new child (network)
     """
     father = roulette_selection(nets, ratio)
@@ -208,10 +208,8 @@ def mutate(nets, pm, range_) -> list:
             if random.random() < pm:
                 # mutate weights and bias
                 for k in range(len(nets.hs[j].weights)):
-                    nets.hs[j].weights[k] += random.uniform(
-                        *range_) * nets.hs[j].weights[k]
-                nets.hs[j].bias += random.uniform(*range_) * \
-                    nets.hs[j].bias
+                    nets.hs[j].weights[k] += random.uniform(*range_) * nets.hs[j].weights[k]
+                nets.hs[j].bias += random.uniform(*range_) * nets.hs[j].bias
         return nets
 
     for i in range(len(nets)):
@@ -220,10 +218,8 @@ def mutate(nets, pm, range_) -> list:
             if random.random() < pm:
                 # mutate weights and bias
                 for k in range(len(nets[i].hs[j].weights)):
-                    nets[i].hs[j].weights[k] += random.uniform(
-                        *range_) * nets[i].hs[j].weights[k]
-                nets[i].hs[j].bias += random.uniform(*range_) * \
-                    nets[i].hs[j].bias
+                    nets[i].hs[j].weights[k] += random.uniform(*range_) * nets[i].hs[j].weights[k]
+                nets[i].hs[j].bias += random.uniform(*range_) * nets[i].hs[j].bias
     return nets
 
 
@@ -231,7 +227,7 @@ def get_elites2(nets, cars) -> list:
     """
     get selected elites networks from this generation
     """
-    elites = [nets[i] for i in range(len(nets)) if cars[i].selected == True]
+    elites = [nets[i] for i in range(len(nets)) if cars[i].selected is True]
     return elites
 
 
@@ -276,7 +272,7 @@ def main():
     nets = []
 
     # initialize networks list, size: 100
-    for i in range(100):
+    for _ in range(100):
         nets.append(NeuralNetwork())
 
     # update fitness according to behaves
@@ -295,7 +291,7 @@ def main():
     next_gen_nets.extend(elites)
 
     # create hybrid children and add them to next generation until enough
-    for i in range(int(len(nets) / 4 * 3)):
+    for _ in range(int(len(nets) / 4 * 3)):
         child = crossover(nets, 0.3)
         next_gen_nets.append(child)
 

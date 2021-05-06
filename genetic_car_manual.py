@@ -1,12 +1,13 @@
+import copy
+import math
+import pygame as pg
 import sys
 import time
-import math
-import copy
-import pygame as pg
 from pygame.locals import *
+
 from nn import *
 
-pg.init()  # initilize the game
+pg.init()  # initialize the game
 size = width, height = 1060, 700  # screen size
 screen = pg.display.set_mode(size)
 pg.display.set_caption("Genetic algorithm car")  # set title
@@ -49,7 +50,7 @@ class Car:
         self.speed = min_speed
 
         # live status
-        self.isAlive = True
+        self.is_alive = True
 
         # three distance indicator lines' end point positions
         self.x1, self.y1 = 0, 0
@@ -71,21 +72,21 @@ class Car:
 
     def update_position(self):
         # update position and distance according to angle and speed
-        if not self.isAlive:
+        if not self.is_alive:
             return
 
-        angle = math.pi*(self.angle)/180
-        self.x += self.speed*math.cos(angle)
-        self.y -= self.speed*math.sin(angle)
-        self.distance += math.sqrt((self.speed*math.cos(angle))
-                                   ** 2+(self.speed*math.sin(angle))**2)
+        angle = math.pi * self.angle / 180
+        self.x += self.speed * math.cos(angle)
+        self.y -= self.speed * math.sin(angle)
+        self.distance += math.sqrt((self.speed * math.cos(angle))
+                                   ** 2 + (self.speed * math.sin(angle)) ** 2)
 
     def detect_track_boundary(self):
         # if screen.get_at((int(self.x), int(self.y))) == (0, 0, 0, 255):
         try:
             pixel = screen.get_at((int(self.x), int(self.y)))
             if pixel[0] <= 1 and pixel[1] <= 1 and pixel[2] <= 1:
-                self.isAlive = False
+                self.is_alive = False
         except:
             return
 
@@ -100,48 +101,49 @@ class Car:
 
     def calculate_three_distance(self):
         # calculate car's three angles' distances form the track boundary
-        if not self.isAlive:
+        if not self.is_alive:
             return
 
-        ang1 = self.angle+55
+        # three angles
+        ang1 = self.angle + 55
         ang2 = self.angle
-        ang3 = self.angle-55
+        ang3 = self.angle - 55
 
         # rand
-        angle1 = math.pi*(ang1)/180
-        angle2 = math.pi*(ang2)/180
-        angle3 = math.pi*(ang3)/180
+        angle1 = math.pi * ang1 / 180
+        angle2 = math.pi * ang2 / 180
+        angle3 = math.pi * ang3 / 180
 
-        d = 40  # weight to reduce the distance to a resonable region
+        d = 40  # weight to reduce the distance to a reasonable region
         for i in range(1000):
-            x1 = self.x+i*math.cos(angle1)
-            y1 = self.y-i*math.sin(angle1)
-            # detect track boundary (black color) (0, 0, 0, 255) or (0, 1, 0, 255)
+            x1 = self.x + i * math.cos(angle1)
+            y1 = self.y - i * math.sin(angle1)
 
+            # detect track boundary (black color) (0, 0, 0, 255) or (0, 1, 0, 255)
             pixel = screen.get_at((int(x1), int(y1)))
             if pixel[0] <= 1 and pixel[1] <= 1 and pixel[2] <= 1:
                 self.x1, self.y1 = x1, y1
-                self.dis1 = math.sqrt((self.x-x1)**2+(self.y-y1)**2)/d
+                self.dis1 = math.sqrt((self.x - x1) ** 2 + (self.y - y1) ** 2) / d
                 break
 
         for i in range(1000):
-            x2 = self.x+i*math.cos(angle2)
-            y2 = self.y-i*math.sin(angle2)
+            x2 = self.x + i * math.cos(angle2)
+            y2 = self.y - i * math.sin(angle2)
             # detect track boundary (black color) (0, 0, 0, 255) or (0, 1, 0, 255)
             pixel = screen.get_at((int(x2), int(y2)))
             if pixel[0] <= 1 and pixel[1] <= 1 and pixel[2] <= 1:
                 self.x2, self.y2 = x2, y2
-                self.dis2 = math.sqrt((self.x-x2)**2+(self.y-y2)**2)/d
+                self.dis2 = math.sqrt((self.x - x2) ** 2 + (self.y - y2) ** 2) / d
                 break
 
         for i in range(1000):
-            x3 = self.x+i*math.cos(angle3)
-            y3 = self.y-i*math.sin(angle3)
+            x3 = self.x + i * math.cos(angle3)
+            y3 = self.y - i * math.sin(angle3)
             # detect track boundary (black color) (0, 0, 0, 255) or (0, 1, 0, 255)
             pixel = screen.get_at((int(x3), int(y3)))
             if pixel[0] <= 1 and pixel[1] <= 1 and pixel[2] <= 1:
                 self.x3, self.y3 = x3, y3
-                self.dis3 = math.sqrt((self.x-x3)**2+(self.y-y3)**2)/d
+                self.dis3 = math.sqrt((self.x - x3) ** 2 + (self.y - y3) ** 2) / d
                 break
 
     def draw(self, color='blue'):
@@ -159,7 +161,7 @@ class Car:
 
 def create_car_agents():
     cars = []
-    for i in range(num):
+    for _ in range(num):
         car = Car()
         cars.append(car)
     return cars
@@ -179,7 +181,7 @@ def main():
     run = True  # running status
     pause = False  # pause status
 
-    mannual_select = False
+    manual_select = False
     flag_next_gen = False
 
     # create cars
@@ -187,7 +189,7 @@ def main():
 
     # create networks
     nets = []
-    for i in range(num):
+    for _ in range(num):
         nets.append(NeuralNetwork())
 
     # main loop
@@ -201,8 +203,8 @@ def main():
                 if event.key == pg.K_p:  # Key 'P' to pause
                     pause = not pause
                 if event.key == pg.K_SPACE:  # Key 'Space' to enter next gen
-                    if alive == 0 and mannual_select == True:
-                        mannual_select = False
+                    if alive == 0 and manual_select:
+                        manual_select = False
                         flag_next_gen = True
                         print('Next generation!')
                         # top elites' networks
@@ -214,16 +216,16 @@ def main():
                         # add this generation's elites directly to next generation
                         next_gen_nets.extend(elites)
 
-                        # add this generation's elites' children to next generation
-                        while len(next_gen_nets) < int(1*len(cars)/4):
+                        # add this generation's elites' children to next generation until enough
+                        while len(next_gen_nets) < int(1 * len(cars) / 4):
                             temp_elites = copy.deepcopy(elites)
                             temp_elites = mutate(
                                 temp_elites, pm, mutate_elites_range)
                             next_gen_nets.extend(temp_elites)
 
-                        # create hybrid children and add them to next geration until enough
+                        # create hybrid children and add them to next generation until enough
                         temp_elites = copy.deepcopy(elites)
-                        for i in range(len(cars)-len(next_gen_nets)):
+                        for _ in range(len(cars) - len(next_gen_nets)):
                             child = crossover2(temp_elites)
                             child = mutate(child, pm, mutate_range)
                             next_gen_nets.append(child)
@@ -247,9 +249,9 @@ def main():
                 if alive == 0:
                     x, y = pg.mouse.get_pos()
                     for i in range(len(cars)):
-                        if cars[i].x - 8 <= x <= cars[i].x+8 and cars[i].y - 8 <= y <= cars[i].y+8:
+                        if cars[i].x - 8 <= x <= cars[i].x + 8 and cars[i].y - 8 <= y <= cars[i].y + 8:
                             cars[i].selected = True
-                            mannual_select = True
+                            manual_select = True
 
         if pause:
             continue
@@ -257,15 +259,15 @@ def main():
         # calculate fps
         count += 1
         now = time.time()
-        if now-start > 0.1:
-            fps = count/(now-start)
+        if now - start > 0.1:
+            fps = count / (now - start)
             start = now
             count = 0
 
         screen.blit(background, (0, 0))  # draw background
 
         for i in range(len(cars)):
-            if cars[i].isAlive:
+            if cars[i].is_alive:
                 # calculate distance from car to track boundary
                 try:
                     cars[i].calculate_three_distance()
@@ -289,7 +291,7 @@ def main():
                 # update speed and angle only every time interval
                 if cars[i].counter >= min_angle_speed_change_frame_interval:
                     cars[i].counter = 0
-                    cars[i].angle += angle*12
+                    cars[i].angle += angle * 12
                     cars[i].speed = speed
                 else:
                     cars[i].counter += 1
@@ -298,10 +300,10 @@ def main():
                 cars[i].detect_track_boundary()  # detect collide
 
         # change to dead if time beyond 30 seconds
-        if time.time()-last_round_time > gen_max_time:
+        if time.time() - last_round_time > gen_max_time:
             for i in range(len(cars)):
-                if cars[i].isAlive:
-                    cars[i].isAlive = False
+                if cars[i].is_alive:
+                    cars[i].is_alive = False
 
         # ========================== drawing part ==========================
         alive = 0  # survive numbers
@@ -316,23 +318,23 @@ def main():
                     cars[i].draw('red')  # draw car itself
                 else:
                     cars[i].draw('blue')  # draw car itself
-            if cars[i].isAlive:
+            if cars[i].is_alive:
                 alive += 1  # calculate alive members
                 cars[i].draw_indicator_line()  # draw three indicator lines
 
         # draw params on the screen
-        draw_text("Gen: "+str(current_gen), (900, 10), (0, 0, 255))
-        draw_text("All: "+str(len(cars)), (900, 30), (0, 0, 255))
-        draw_text("Alive: "+str(alive), (900, 50), (0, 0, 255))
+        draw_text("Gen: " + str(current_gen), (900, 10), (0, 0, 255))
+        draw_text("All: " + str(len(cars)), (900, 30), (0, 0, 255))
+        draw_text("Alive: " + str(alive), (900, 50), (0, 0, 255))
         draw_text("Top1 distance: " +
                   str(int(cars[0].distance)), (900, 70), (0, 0, 255))
         draw_text("Total time: " +
-                  str(int(time.time()-begin)), (900, 90), (0, 0, 255))
+                  str(int(time.time() - begin)), (900, 90), (0, 0, 255))
         draw_text("This round time: " +
-                  str(int(time.time()-last_round_time)), (900, 110), (0, 0, 255))
-        draw_text("Fps:"+str(round(fps, 5)), (10, 10), (0, 0, 255))
+                  str(int(time.time() - last_round_time)), (900, 110), (0, 0, 255))
+        draw_text("Fps:" + str(round(fps, 5)), (10, 10), (0, 0, 255))
         mouse_pos_x, mouse_pos_y = pg.mouse.get_pos()  # get mouse's position
-        draw_text('pos_x:'+str(mouse_pos_x)+'  pos_y:' +
+        draw_text('pos_x:' + str(mouse_pos_x) + '  pos_y:' +
                   str(mouse_pos_y), (10, 30), (0, 0, 255))
         draw_text(str(screen.get_at((mouse_pos_x, mouse_pos_y))),
                   (10, 70), (0, 0, 255))
@@ -342,7 +344,7 @@ def main():
 
         # when this gen was over
         if alive == 0:
-            if flag_next_gen == False:
+            if not flag_next_gen:
                 continue
 
     pg.quit()
